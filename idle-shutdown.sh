@@ -26,6 +26,29 @@ sanitize_value() {
   printf '%s' "$1" | tr -d '\r\n' | awk '{print $1}' | head -c 128
 }
 
+normalize_rev_label() {
+  local raw="$1"
+  local v=""
+  v="$(sanitize_value "$raw")"
+  [ -n "$v" ] || { printf '%s\n' "unknown"; return; }
+
+  case "$v" in
+    idle-shutdown-v*) v="v${v#idle-shutdown-v}" ;;
+    idle-shutdown-*) v="${v#idle-shutdown-}" ;;
+  esac
+
+  # Normalize version-like labels to compact form (vX.Y.Z).
+  if [[ "$v" =~ ^v?[0-9]+(\.[0-9]+)+(-[0-9A-Za-z.+~:]+)?$ ]]; then
+    v="${v%%-*}"
+    case "$v" in
+      v*) : ;;
+      *) v="v$v" ;;
+    esac
+  fi
+
+  printf '%s\n' "$v"
+}
+
 read_marker_file() {
   local p="$1"
   local v=""
@@ -101,6 +124,7 @@ if [ -z "${IDLE_SHUTDOWN_REV:-}" ] || [ "$IDLE_SHUTDOWN_REV" = "unknown" ]; then
 fi
 
 if [ -z "${IDLE_SHUTDOWN_REV:-}" ]; then IDLE_SHUTDOWN_REV="unknown"; fi
+IDLE_SHUTDOWN_REV="$(normalize_rev_label "$IDLE_SHUTDOWN_REV")"
 
 : "${IDLE_MINUTES:=20}"
 : "${BOOT_GRACE_MINUTES:=20}"

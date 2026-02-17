@@ -15,6 +15,7 @@
 `idle-shutdown` 會依照閒置策略決定是否關機：
 - `connections` 模式：只要有已建立的 SSH/RDP TCP 連線就視為活躍。
 - `activity` 模式：即使連線仍存在，也以使用者活動 marker 判斷是否閒置並關機。
+- 預設模式是 `activity`（由 `/etc/default/idle-shutdown` 設定）：會透過 hook 追蹤實際使用者輸入訊號，SSH 以 prompt 週期（按 Enter 後）活動為準，RDP 以鍵盤/滑鼠事件為準。
 
 這適合雲端 VM 情境，在不影響實際使用中的連線前提下控制成本。
 

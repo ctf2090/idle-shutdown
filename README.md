@@ -15,6 +15,7 @@ This project ships as a Debian package (`Architecture: all`) and includes:
 `idle-shutdown` decides whether to shut down a VM based on idle policy:
 - `connections` mode: any established SSH/RDP TCP connection is treated as active.
 - `activity` mode: shutdown is based on user activity markers, even if a session stays connected.
+- Default mode is `activity` (via `/etc/default/idle-shutdown`): it tracks real user input signals through hooks, using SSH prompt-cycle activity (after Enter) and RDP keyboard/mouse events.
 
 It is designed for cloud VM workflows where we want automatic cost control without killing actively used sessions.
 

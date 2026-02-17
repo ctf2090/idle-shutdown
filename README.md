@@ -1,5 +1,7 @@
 # idle-shutdown
 
+[English](README.md) | [繁體中文](README.zh-TW.md)
+
 Idle-based VM auto-shutdown helper for Linux VMs, focused on SSH and RDP usage.
 
 This project ships as a Debian package (`Architecture: all`) and includes:

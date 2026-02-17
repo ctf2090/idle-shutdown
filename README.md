@@ -31,6 +31,35 @@ Second-boot gate:
 - If that marker file is missing, the script exits without shutdown logic.
 - This prevents shutdown during first-boot provisioning flows.
 
+## SSH/RDP Input Hooks
+
+`idle-shutdown` uses marker files to represent recent user input activity.
+
+SSH keystroke hook:
+- File: `/etc/profile.d/idle-terminal-activity.sh`
+- Trigger model: injected `PROMPT_COMMAND` in interactive SSH `pts/*` shells.
+- Behavior: touches marker mtime at each prompt cycle (typically after Enter), not on every raw key event.
+- Marker path:
+  - preferred: `/run/user/<uid>/idle-terminal-activity-ssh-<tty_tag>`
+  - fallback: `/tmp/idle-terminal-activity-<uid>-ssh-<tty_tag>`
+
+RDP keyboard/mouse hook:
+- File: `/usr/local/sbin/idle-rdp-input-watch.sh` (started by desktop autostart file).
+- Trigger model: `xinput test-xi2 --root` event stream in GUI session.
+- Behavior: touches marker mtime on XI2 key/button/motion events.
+- Marker path:
+  - preferred: `/run/user/<uid>/idle-rdp-input-activity`
+  - fallback: `/tmp/idle-rdp-input-activity-<uid>`
+
+Marker cleanup hooks:
+- SSH disconnect watcher (`idle-ssh-disconnect-watch.service`) tails journal/auth logs and removes stale SSH markers for closed sessions.
+- RDP disconnect watcher (`idle-rdp-disconnect-watch.service`) tails `xrdp-sesman` logs and removes user/all RDP markers when TCP disconnect is confirmed.
+
+How decision uses hooks (`IDLE_MODE=activity`):
+- `idle-shutdown.sh` reads marker mtimes and computes idle seconds from `now - mtime`.
+- Most recent activity across valid markers is treated as current user activity.
+- If markers are missing/stale past `IDLE_MINUTES`, shutdown is triggered.
+
 ## Repository Layout
 
 - `idle-shutdown.sh`: main decision logic.

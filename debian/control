@@ -8,7 +8,7 @@ Rules-Requires-Root: no
 Homepage: https://github.com/ctf2090/idle-shutdown
 
 Package: idle-shutdown
-Architecture: amd64 arm64
+Architecture: all
 Depends: ${misc:Depends}, bash, coreutils, curl, gawk, grep, iproute2, procps, sed, systemd, util-linux
 Description: Idle-based VM shutdown helper for SSH/RDP activity
  Installs the idle-shutdown script, timer, and watcher services used by

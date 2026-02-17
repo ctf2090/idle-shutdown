@@ -1,4 +1,4 @@
-DEB_ARCH ?= $(shell dpkg --print-architecture 2>/dev/null || echo amd64)
+DEB_ARCH ?= all
 DEB_PACKAGE_VERSION ?=
 RELEASE_DIR ?= release
 TAG_PREFIX ?= idle-shutdown-v
@@ -17,16 +17,16 @@ STAMP_IDLE_SHUTDOWN_SHA256 ?= $(shell if [ -f "$(IDLE_SHUTDOWN_SCRIPT)" ]; then 
 STAMP_EXPORTER_SHA256 ?= $(shell if [ -f "$(IDLE_SHUTDOWN_EXPORTER)" ]; then sha256sum "$(IDLE_SHUTDOWN_EXPORTER)" | awk '{print $$1}'; else echo unknown; fi)
 
 .PHONY: help check idle-smoke \
-	deb-build deb-build-amd64 deb-build-arm64 \
-	deb-smoke deb-smoke-amd64 deb-smoke-arm64 \
+	deb-build deb-build-all \
+	deb-smoke deb-smoke-all \
 	release tag-build tag-show tag-show-raw tag-list
 
 help:
 	@echo "Targets:" \
 	&& echo "  make check             Run local syntax/smoke checks" \
-	&& echo "  make deb-build         Build Debian package for DEB_ARCH ($(DEB_ARCH))" \
-	&& echo "  make deb-smoke         Build + validate package payload for DEB_ARCH" \
-	&& echo "  make release           Resolve tag/version, run check + deb-smoke (amd64/arm64), then tag-build" \
+	&& echo "  make deb-build         Build Debian package for DEB_ARCH ($(DEB_ARCH), expected: all)" \
+	&& echo "  make deb-smoke         Build + validate package payload for DEB_ARCH (all)" \
+	&& echo "  make release           Resolve tag/version, run check + deb-smoke (all), then tag-build" \
 	&& echo "  make tag-build         Create/reuse annotated release tag (auto-increment if needed)" \
 	&& echo "  make tag-show          Show parsed tag metadata (default latest)" \
 	&& echo "  make tag-show-raw      Show raw annotated tag object" \
@@ -49,17 +49,16 @@ idle-smoke:
 	@bash "$(IDLE_SHUTDOWN_SMOKE_TEST)"
 
 deb-build:
-	@arch="$(strip $(DEB_ARCH))"; \
+	@set -eu; \
+	arch="$(strip $(DEB_ARCH))"; \
 	override_ver="$(strip $(DEB_PACKAGE_VERSION))"; \
-	native_arch="$$(dpkg --print-architecture 2>/dev/null || echo amd64)"; \
 	pkg_ver="$$(dpkg-parsechangelog -S Version 2>/dev/null || head -n 1 debian/changelog | cut -d'(' -f2 | cut -d')' -f1)"; \
 	changelog_ver="$$pkg_ver"; \
-	extra_flags=""; \
 	changelog_backup="$$(mktemp)"; \
 	restore_changelog=0; \
 	cp debian/changelog "$$changelog_backup"; \
 	trap 'if [ "$$restore_changelog" = "1" ]; then cp "$$changelog_backup" debian/changelog; fi; rm -f -- "$$changelog_backup"' EXIT INT TERM; \
-	case "$$arch" in amd64|arm64) : ;; *) echo "[ERROR] Unsupported DEB_ARCH=$$arch (expected: amd64|arm64)"; exit 2 ;; esac; \
+	case "$$arch" in all) : ;; *) echo "[ERROR] Unsupported DEB_ARCH=$$arch (expected: all)"; exit 2 ;; esac; \
 	if [ -z "$$pkg_ver" ]; then echo "[ERROR] Could not resolve package version from debian/changelog"; exit 2; fi; \
 	if [ -n "$$override_ver" ] && [ "$$override_ver" != "$$pkg_ver" ]; then \
 		source_pkg="$$(dpkg-parsechangelog -S Source 2>/dev/null || echo idle-shutdown)"; \
@@ -80,12 +79,8 @@ deb-build:
 	if [ -n "$$override_ver" ] && [ "$$override_ver" = "$$changelog_ver" ]; then \
 		echo "[INFO] DEB_PACKAGE_VERSION already matches changelog: $$pkg_ver"; \
 	fi; \
-	if [ "$$arch" != "$$native_arch" ]; then \
-		extra_flags="-d"; \
-		echo "[INFO] Cross-building $$arch on $$native_arch (using dpkg-buildpackage $$extra_flags)"; \
-	fi; \
 	echo "[INFO] Building Debian package: idle-shutdown ($$arch)"; \
-	dpkg-buildpackage -us -uc -b -a"$$arch" $$extra_flags; \
+	dpkg-buildpackage -us -uc -A; \
 	mkdir -p "$(RELEASE_DIR)"; \
 	for ext in deb changes buildinfo; do \
 		src="../idle-shutdown_$${pkg_ver}_$${arch}.$$ext"; \
@@ -93,17 +88,19 @@ deb-build:
 			mv -f -- "$$src" "$(RELEASE_DIR)/"; \
 		fi; \
 	done; \
+	if [ ! -f "$(RELEASE_DIR)/idle-shutdown_$${pkg_ver}_$${arch}.deb" ]; then \
+		echo "[ERROR] Build did not produce expected package: $(RELEASE_DIR)/idle-shutdown_$${pkg_ver}_$${arch}.deb"; \
+		exit 2; \
+	fi; \
 	echo "[OK] Build complete: $(RELEASE_DIR)/idle-shutdown_$${pkg_ver}_$${arch}.deb"
 
-deb-build-amd64:
-	@$(MAKE) DEB_ARCH=amd64 deb-build
-
-deb-build-arm64:
-	@$(MAKE) DEB_ARCH=arm64 deb-build
+deb-build-all:
+	@$(MAKE) DEB_ARCH=all deb-build
 
 deb-smoke:
-	@arch="$(strip $(DEB_ARCH))"; \
-	case "$$arch" in amd64|arm64) : ;; *) echo "[ERROR] Unsupported DEB_ARCH=$$arch (expected: amd64|arm64)"; exit 2 ;; esac; \
+	@set -eu; \
+	arch="$(strip $(DEB_ARCH))"; \
+	case "$$arch" in all) : ;; *) echo "[ERROR] Unsupported DEB_ARCH=$$arch (expected: all)"; exit 2 ;; esac; \
 	echo "[INFO] Building package before smoke test ($$arch)"; \
 	$(MAKE) DEB_ARCH="$$arch" deb-build; \
 	pkg="$$(ls -1t "$(RELEASE_DIR)"/idle-shutdown_*_$${arch}.deb 2>/dev/null | head -n 1 || true)"; \
@@ -157,16 +154,13 @@ deb-smoke:
 	fi; \
 	echo "[OK] Smoke test passed: $$pkg"
 
-deb-smoke-amd64:
-	@$(MAKE) DEB_ARCH=amd64 deb-smoke
-
-deb-smoke-arm64:
-	@$(MAKE) DEB_ARCH=arm64 deb-smoke
+deb-smoke-all:
+	@$(MAKE) DEB_ARCH=all deb-smoke
 
 release:
 	@tag_file="$$(mktemp)"; \
 	trap 'rm -f -- "$$tag_file"' EXIT INT TERM; \
-	echo "[INFO] Release step 1/5: resolve release tag/version"; \
+	echo "[INFO] Release step 1/4: resolve release tag/version"; \
 	$(MAKE) TAG_CREATE=0 TAG_RESULT_FILE="$$tag_file" tag-build >/dev/null; \
 	release_tag="$$(cat "$$tag_file" 2>/dev/null || true)"; \
 	if [ -z "$$release_tag" ]; then \
@@ -181,13 +175,11 @@ release:
 	release_pkg_ver="$$release_upstream-1"; \
 	echo "[INFO] Resolved release tag: $$release_tag"; \
 	echo "[INFO] Synced Debian package version: $$release_pkg_ver"; \
-	echo "[INFO] Release step 2/5: check"; \
+	echo "[INFO] Release step 2/4: check"; \
 	$(MAKE) check; \
-	echo "[INFO] Release step 3/5: deb-smoke amd64"; \
-	$(MAKE) DEB_ARCH=amd64 DEB_PACKAGE_VERSION="$$release_pkg_ver" deb-smoke; \
-	echo "[INFO] Release step 4/5: deb-smoke arm64"; \
-	$(MAKE) DEB_ARCH=arm64 DEB_PACKAGE_VERSION="$$release_pkg_ver" deb-smoke; \
-	echo "[INFO] Release step 5/5: tag-build"; \
+	echo "[INFO] Release step 3/4: deb-smoke all"; \
+	$(MAKE) DEB_ARCH=all DEB_PACKAGE_VERSION="$$release_pkg_ver" deb-smoke; \
+	echo "[INFO] Release step 4/4: tag-build"; \
 	$(MAKE) TAG="$$release_tag" PACKAGE_VERSION="$$release_pkg_ver" TAG_VERSION="$$release_upstream" tag-build; \
 	echo "[OK] Release completed locally."; \
 	echo "[NEXT] Push commit and tags:"; \

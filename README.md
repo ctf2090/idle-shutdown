@@ -4,24 +4,23 @@ Idle-based VM auto-shutdown helper (SSH/RDP aware) with Debian packaging.
 
 ## Release From This Folder
 
-Run all checks and build smoke-tested `.deb` packages for both `amd64` and `arm64`,
+Run all checks and build a smoke-tested architecture-independent (`all`) `.deb`,
 then create/reuse an annotated release tag:
 
 ```bash
 make release
 ```
 
-Build only one architecture:
+Build package:
 
 ```bash
-make DEB_ARCH=amd64 deb-build
-make DEB_ARCH=arm64 deb-build
+make DEB_ARCH=all deb-build
 ```
 
 Smoke test package payload:
 
 ```bash
-make DEB_ARCH=amd64 deb-smoke
+make DEB_ARCH=all deb-smoke
 ```
 
 ## Notes

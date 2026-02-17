@@ -1,0 +1,17 @@
+[Unit]
+Description=Watch SSH disconnect events and clear idle SSH activity markers
+After=network-online.target ssh.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+SyslogIdentifier=idle-ssh-disconnect-watch
+StandardOutput=journal+console
+StandardError=journal+console
+EnvironmentFile=-/etc/default/idle-shutdown
+ExecStart=/usr/local/sbin/idle-ssh-disconnect-watch.sh
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

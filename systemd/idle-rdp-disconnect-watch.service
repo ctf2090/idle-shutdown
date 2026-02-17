@@ -1,0 +1,17 @@
+[Unit]
+Description=Watch XRDP disconnect events and clear idle RDP activity markers
+After=network-online.target xrdp-sesman.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+SyslogIdentifier=idle-rdp-disconnect-watch
+StandardOutput=journal+console
+StandardError=journal+console
+EnvironmentFile=-/etc/default/idle-shutdown
+ExecStart=/usr/local/sbin/idle-rdp-disconnect-watch.sh
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

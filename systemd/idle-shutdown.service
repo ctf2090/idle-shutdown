@@ -1,0 +1,12 @@
+[Unit]
+Description=Shutdown VM after idle timeout
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+SyslogIdentifier=idle-shutdown
+StandardOutput=journal+console
+StandardError=journal+console
+EnvironmentFile=-/etc/default/idle-shutdown
+ExecStart=/usr/local/sbin/idle-shutdown.sh

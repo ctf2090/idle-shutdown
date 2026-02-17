@@ -1,0 +1,11 @@
+[Unit]
+Description=Periodically check whether the VM is idle and should shutdown
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=3min
+AccuracySec=30s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

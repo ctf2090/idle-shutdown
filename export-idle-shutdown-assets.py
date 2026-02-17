@@ -12,26 +12,39 @@ from pathlib import Path
 import yaml
 
 
-TARGETS = {
+CLOUD_INIT_TARGETS = {
     "/etc/default/idle-shutdown": ("etc/default/idle-shutdown", 0o644),
     "/etc/profile.d/idle-terminal-activity.sh": ("etc/profile.d/idle-terminal-activity.sh", 0o644),
     "/etc/xdg/autostart/idle-rdp-input-watch.desktop": ("etc/xdg/autostart/idle-rdp-input-watch.desktop", 0o644),
-    "/etc/systemd/system/idle-shutdown.service": ("etc/systemd/system/idle-shutdown.service", 0o644),
-    "/etc/systemd/system/idle-shutdown.timer": ("etc/systemd/system/idle-shutdown.timer", 0o644),
-    "/etc/systemd/system/idle-rdp-disconnect-watch.service": (
-        "etc/systemd/system/idle-rdp-disconnect-watch.service",
-        0o644,
-    ),
-    "/etc/systemd/system/idle-ssh-disconnect-watch.service": (
-        "etc/systemd/system/idle-ssh-disconnect-watch.service",
-        0o644,
-    ),
     "/usr/local/sbin/idle-rdp-input-watch.sh": ("usr/local/sbin/idle-rdp-input-watch.sh", 0o755),
     "/usr/local/sbin/idle-rdp-disconnect-watch.sh": (
         "usr/local/sbin/idle-rdp-disconnect-watch.sh",
         0o755,
     ),
     "/usr/local/sbin/idle-ssh-disconnect-watch.sh": ("usr/local/sbin/idle-ssh-disconnect-watch.sh", 0o755),
+}
+
+LOCAL_FILE_TARGETS = {
+    "/etc/systemd/system/idle-shutdown.service": (
+        "etc/systemd/system/idle-shutdown.service",
+        0o644,
+        "systemd/idle-shutdown.service",
+    ),
+    "/etc/systemd/system/idle-shutdown.timer": (
+        "etc/systemd/system/idle-shutdown.timer",
+        0o644,
+        "systemd/idle-shutdown.timer",
+    ),
+    "/etc/systemd/system/idle-rdp-disconnect-watch.service": (
+        "etc/systemd/system/idle-rdp-disconnect-watch.service",
+        0o644,
+        "systemd/idle-rdp-disconnect-watch.service",
+    ),
+    "/etc/systemd/system/idle-ssh-disconnect-watch.service": (
+        "etc/systemd/system/idle-ssh-disconnect-watch.service",
+        0o644,
+        "systemd/idle-ssh-disconnect-watch.service",
+    ),
 }
 
 
@@ -67,6 +80,7 @@ def main() -> int:
     cloud_init_path = Path(args.cloud_init)
     idle_script_path = Path(args.idle_script)
     out_root = Path(args.out_dir)
+    script_root = Path(__file__).resolve().parent
 
     if not cloud_init_path.is_file():
         sys.stderr.write(f"[ERROR] Missing cloud-init file: {cloud_init_path}\n")
@@ -78,16 +92,23 @@ def main() -> int:
     with cloud_init_path.open("r", encoding="utf-8") as f:
         doc = yaml.safe_load(f)
 
+    for _dst_path, (rel, mode, local_rel) in LOCAL_FILE_TARGETS.items():
+        src = script_root / local_rel
+        if not src.is_file():
+            sys.stderr.write(f"[ERROR] Missing local asset file: {src}\n")
+            return 2
+        write_text(out_root / rel, src.read_text(encoding="utf-8"), mode)
+
     write_files = doc.get("write_files") or []
     by_path: dict[str, str] = {}
     for entry in write_files:
         if not isinstance(entry, dict):
             continue
         file_path = entry.get("path")
-        if file_path in TARGETS:
+        if file_path in CLOUD_INIT_TARGETS:
             by_path[file_path] = entry.get("content") or ""
 
-    missing = [p for p in TARGETS if p not in by_path]
+    missing = [p for p in CLOUD_INIT_TARGETS if p not in by_path]
     if missing:
         sys.stderr.write("[ERROR] cloud-init.yaml missing write_files entries for:\n")
         for item in missing:
@@ -95,7 +116,7 @@ def main() -> int:
         return 2
 
     for src_path, content in by_path.items():
-        rel, mode = TARGETS[src_path]
+        rel, mode = CLOUD_INIT_TARGETS[src_path]
         write_text(out_root / rel, content, mode)
 
     idle_dst = out_root / "usr/local/sbin/idle-shutdown.sh"

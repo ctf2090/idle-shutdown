@@ -1,2 +1,10 @@
 __pycache__/
 *.pyc
+release/
+
+debian/.debhelper/
+debian/debhelper-build-stamp
+debian/files
+debian/idle-shutdown/
+debian/idle-shutdown.substvars
+debian/tmp/

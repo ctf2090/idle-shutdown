@@ -1,0 +1,12 @@
+etc/default/idle-shutdown etc/default/
+etc/profile.d/idle-terminal-activity.sh etc/profile.d/
+etc/xdg/autostart/idle-rdp-input-watch.desktop etc/xdg/autostart/
+etc/systemd/system/idle-shutdown.service etc/systemd/system/
+etc/systemd/system/idle-shutdown.timer etc/systemd/system/
+etc/systemd/system/idle-rdp-disconnect-watch.service etc/systemd/system/
+etc/systemd/system/idle-ssh-disconnect-watch.service etc/systemd/system/
+etc/idle-shutdown-git-rev etc/
+usr/local/sbin/idle-shutdown.sh usr/local/sbin/
+usr/local/sbin/idle-rdp-input-watch.sh usr/local/sbin/
+usr/local/sbin/idle-rdp-disconnect-watch.sh usr/local/sbin/
+usr/local/sbin/idle-ssh-disconnect-watch.sh usr/local/sbin/

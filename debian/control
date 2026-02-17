@@ -1,0 +1,15 @@
+Source: idle-shutdown
+Section: admin
+Priority: optional
+Maintainer: codex <codex@local>
+Build-Depends: debhelper-compat (= 13), dh-python, python3, python3-yaml
+Standards-Version: 4.6.2
+Rules-Requires-Root: no
+Homepage: https://github.com/ctf2090/idle-shutdown
+
+Package: idle-shutdown
+Architecture: amd64 arm64
+Depends: ${misc:Depends}, bash, coreutils, curl, gawk, grep, iproute2, procps, sed, systemd, util-linux
+Description: Idle-based VM shutdown helper for SSH/RDP activity
+ Installs the idle-shutdown script, timer, and watcher services used by
+ our GCE Lubuntu workflow.

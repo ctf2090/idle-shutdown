@@ -10,10 +10,6 @@
 - SSH/RDP 活動 marker 輔助程式
 - 打包、smoke test 與 release 自動化
 
-術語說明：
-- `cloud-init` 本身是通用 Linux 佈署機制，不是 GCE 專屬名詞。
-- 在本 README 中，若提到 `cloud-init`，除非另有說明，都是指我們的 GCE cloud-init 佈署流程。
-
 ## 功能說明
 
 `idle-shutdown` 會依照閒置策略決定是否關機：

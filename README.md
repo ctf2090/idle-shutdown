@@ -10,6 +10,10 @@ This project ships as a Debian package (`Architecture: all`) and includes:
 - SSH/RDP activity marker helpers
 - packaging, smoke tests, and release automation
 
+Terminology note:
+- `cloud-init` is a general Linux provisioning mechanism (not GCE-specific).
+- In this README, when we mention `cloud-init`, we mean our GCE cloud-init provisioning flow unless stated otherwise.
+
 ## What It Does
 
 `idle-shutdown` decides whether to shut down a VM based on idle policy:
@@ -164,7 +168,7 @@ systemctl status idle-ssh-disconnect-watch.service
 journalctl -u idle-shutdown.service -n 100 --no-pager
 ```
 
-Note for manual installs outside cloud-init:
+Note for manual installs outside our GCE cloud-init provisioning flow:
 - Ensure `PROVISIONING_DONE_BOOT_ID_PATH` exists with a value different from current `/proc/sys/kernel/random/boot_id`, or the script will keep skipping by design.
 
 ## CI/CD

@@ -10,6 +10,10 @@
 - SSH/RDP 活動 marker 輔助程式
 - 打包、smoke test 與 release 自動化
 
+術語說明：
+- `cloud-init` 本身是通用 Linux 佈署機制，不是 GCE 專屬名詞。
+- 在本 README 中，若提到 `cloud-init`，除非另有說明，都是指我們的 GCE cloud-init 佈署流程。
+
 ## 功能說明
 
 `idle-shutdown` 會依照閒置策略決定是否關機：
@@ -164,7 +168,7 @@ systemctl status idle-ssh-disconnect-watch.service
 journalctl -u idle-shutdown.service -n 100 --no-pager
 ```
 
-非 cloud-init 的手動安裝注意：
+非我們 GCE cloud-init 佈署流程的手動安裝注意：
 - 請確認 `PROVISIONING_DONE_BOOT_ID_PATH` 存在，且內容與目前 `/proc/sys/kernel/random/boot_id` 不同；否則腳本會依設計持續跳過判斷。
 
 ## CI/CD

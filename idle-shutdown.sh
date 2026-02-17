@@ -14,25 +14,92 @@ if [ -f /etc/default/idle-shutdown ]; then
   . /etc/default/idle-shutdown
 fi
 
-# Best-effort build provenance (git short SHA).
-# cloud-init writes /etc/idle-shutdown-git-rev from instance metadata
-# `idle_shutdown_git_rev`.
+# Best-effort build provenance shown in status logs.
+# Priority:
+# 1) release tag (idle-shutdown-vX.Y.Z), from env/file/package metadata
+# 2) legacy git revision markers
 IDLE_SHUTDOWN_REV="unknown"
+version_tag_file="/etc/idle-shutdown-version-tag"
 rev_file="/etc/idle-shutdown-git-rev"
-if [ -f "$rev_file" ]; then
-  IDLE_SHUTDOWN_REV="$(tr -d '\r\n' <"$rev_file" 2>/dev/null | awk '{print $1}' | head -c 64 || true)"
-fi
-if [ -z "${IDLE_SHUTDOWN_REV:-}" ] || [ "$IDLE_SHUTDOWN_REV" = "unknown" ]; then
-  rev="$(curl -fsS -H 'Metadata-Flavor: Google' \
-    http://metadata.google.internal/computeMetadata/v1/instance/attributes/idle_shutdown_git_rev \
+
+sanitize_value() {
+  printf '%s' "$1" | tr -d '\r\n' | awk '{print $1}' | head -c 128
+}
+
+read_marker_file() {
+  local p="$1"
+  local v=""
+  [ -f "$p" ] || return 1
+  v="$(sanitize_value "$(cat "$p" 2>/dev/null || true)")"
+  [ -n "$v" ] || return 1
+  printf '%s\n' "$v"
+}
+
+read_metadata_attr() {
+  local key="$1"
+  local v=""
+  v="$(curl -fsS -H 'Metadata-Flavor: Google' \
+    "http://metadata.google.internal/computeMetadata/v1/instance/attributes/${key}" \
     2>/dev/null || true)"
-  rev="$(printf '%s' "$rev" | tr -d '\r\n' | awk '{print $1}' | head -c 64 || true)"
-  if [ -n "$rev" ]; then
-    IDLE_SHUTDOWN_REV="$rev"
-    printf '%s\n' "$IDLE_SHUTDOWN_REV" >"$rev_file" 2>/dev/null || true
-    chmod 0644 "$rev_file" 2>/dev/null || true
+  v="$(sanitize_value "$v")"
+  [ -n "$v" ] || return 1
+  printf '%s\n' "$v"
+}
+
+package_version_tag() {
+  local pkg_ver=""
+  local upstream=""
+  command -v dpkg-query >/dev/null 2>&1 || return 1
+  pkg_ver="$(dpkg-query -W -f='${Version}\n' idle-shutdown 2>/dev/null | head -n 1 || true)"
+  pkg_ver="$(sanitize_value "$pkg_ver")"
+  [ -n "$pkg_ver" ] || return 1
+  upstream="${pkg_ver%%-*}"
+  [ -n "$upstream" ] || return 1
+  printf 'idle-shutdown-v%s\n' "$upstream"
+}
+
+persist_marker_file() {
+  local p="$1"
+  local v="$2"
+  printf '%s\n' "$v" >"$p" 2>/dev/null || true
+  chmod 0644 "$p" 2>/dev/null || true
+}
+
+tag_from_env="$(sanitize_value "${IDLE_SHUTDOWN_VERSION_TAG:-}")"
+if [ -n "$tag_from_env" ]; then
+  IDLE_SHUTDOWN_REV="$tag_from_env"
+else
+  tag_from_file="$(read_marker_file "$version_tag_file" || true)"
+  if [ -n "$tag_from_file" ]; then
+    IDLE_SHUTDOWN_REV="$tag_from_file"
+  else
+    tag_from_pkg="$(package_version_tag || true)"
+    if [ -n "$tag_from_pkg" ]; then
+      IDLE_SHUTDOWN_REV="$tag_from_pkg"
+      persist_marker_file "$version_tag_file" "$IDLE_SHUTDOWN_REV"
+    else
+      tag_from_meta="$(read_metadata_attr "idle_shutdown_version_tag" || true)"
+      if [ -n "$tag_from_meta" ]; then
+        IDLE_SHUTDOWN_REV="$tag_from_meta"
+        persist_marker_file "$version_tag_file" "$IDLE_SHUTDOWN_REV"
+      fi
+    fi
   fi
 fi
+
+if [ -z "${IDLE_SHUTDOWN_REV:-}" ] || [ "$IDLE_SHUTDOWN_REV" = "unknown" ]; then
+  rev_from_file="$(read_marker_file "$rev_file" || true)"
+  if [ -n "$rev_from_file" ]; then
+    IDLE_SHUTDOWN_REV="$rev_from_file"
+  else
+    rev_from_meta="$(read_metadata_attr "idle_shutdown_git_rev" || true)"
+    if [ -n "$rev_from_meta" ]; then
+      IDLE_SHUTDOWN_REV="$rev_from_meta"
+      persist_marker_file "$rev_file" "$IDLE_SHUTDOWN_REV"
+    fi
+  fi
+fi
+
 if [ -z "${IDLE_SHUTDOWN_REV:-}" ]; then IDLE_SHUTDOWN_REV="unknown"; fi
 
 : "${IDLE_MINUTES:=20}"

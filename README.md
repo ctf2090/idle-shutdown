@@ -26,10 +26,5 @@ make DEB_ARCH=amd64 deb-smoke
 
 ## Notes
 
-- This packaging flow currently extracts some assets from:
-  `../gce-lubuntu-noble/cloud-init.yaml`
-- Override source path when needed:
-
-```bash
-make CLOUD_INIT_PATH=/path/to/cloud-init.yaml release
-```
+- Debian packaging in this folder is self-contained.
+- Runtime assets are sourced from local files under `assets/`, `systemd/`, and `idle-shutdown.sh`.

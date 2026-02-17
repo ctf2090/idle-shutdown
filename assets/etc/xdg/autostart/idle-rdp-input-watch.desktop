@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Idle RDP Input Watch
+Comment=Track RDP keyboard/mouse activity for idle shutdown
+Exec=/usr/local/sbin/idle-rdp-input-watch.sh
+OnlyShowIn=LXQt;XFCE;
+X-GNOME-Autostart-enabled=true
+NoDisplay=true

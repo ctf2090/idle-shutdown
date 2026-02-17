@@ -1,0 +1,41 @@
+# Auto-shutdown after N minutes without real user activity (keyboard/mouse).
+# Global switch:
+# - 1: enabled (default)
+# - 0: disabled (script exits immediately)
+IDLE_SHUTDOWN_ENABLED=1
+
+IDLE_MINUTES=15
+
+# Enable idle-shutdown only on the 2nd boot:
+# - 1st boot: cloud-init provisioning, then an intentional reboot.
+# - 2nd boot: begin idle detection/shutdown logic.
+#
+# (BOOT_GRACE_MINUTES remains supported as a fallback, but is not required
+# for the 2nd boot in our workflow.)
+BOOT_GRACE_MINUTES=0
+
+# How to decide "idle":
+# - connections: any established SSH/RDP connection is considered active (never shutdown while connected).
+# - activity: shut down after IDLE_MINUTES without user activity, even if SSH/RDP stays connected.
+IDLE_MODE=activity
+
+# Status logging frequency (emitted via systemd/journald and sent to console by the unit).
+# Set to 0 to disable periodic countdown messages.
+STATUS_PERIOD_MINUTES=3
+
+# VM-side RDP TCP port to inspect for established sessions.
+RDP_TCP_PORT=3389
+
+# XRDP sesman log path used by disconnect watcher.
+XRDP_SESMAN_LOG_PATH=/var/log/xrdp-sesman.log
+
+# SSH disconnect watcher sources:
+# - systemd journal unit (usually "ssh")
+# - fallback auth log file if journal streaming is unavailable
+SSH_LOG_UNIT=ssh
+SSH_AUTH_LOG_PATH=/var/log/auth.log
+
+# In IDLE_MODE=activity, when no established RDP TCP exists, idle-shutdown
+# removes RDP marker files. This grace is a fallback in case a stale marker
+# survives cleanup (for example, unexpected permission/runtime state).
+RDP_DISCONNECT_GRACE_SECONDS=90

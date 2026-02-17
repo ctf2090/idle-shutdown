@@ -8,7 +8,6 @@ PACKAGE_VERSION ?= $(shell dpkg-parsechangelog -S Version 2>/dev/null || head -n
 TAG_VERSION ?= $(shell printf '%s' "$(PACKAGE_VERSION)" | sed -E 's/-[^-]+$$//')
 TAG_RESULT_FILE ?=
 
-CLOUD_INIT_PATH ?= ../gce-lubuntu-noble/cloud-init.yaml
 IDLE_SHUTDOWN_SCRIPT ?= ./idle-shutdown.sh
 IDLE_SHUTDOWN_EXPORTER ?= ./export-idle-shutdown-assets.py
 IDLE_SHUTDOWN_SMOKE_TEST ?= ./test/idle-shutdown-smoke.sh
@@ -16,7 +15,6 @@ IDLE_SHUTDOWN_SMOKE_TEST ?= ./test/idle-shutdown-smoke.sh
 STAMP_CREATE_UTC ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 STAMP_IDLE_SHUTDOWN_SHA256 ?= $(shell if [ -f "$(IDLE_SHUTDOWN_SCRIPT)" ]; then sha256sum "$(IDLE_SHUTDOWN_SCRIPT)" | awk '{print $$1}'; else echo unknown; fi)
 STAMP_EXPORTER_SHA256 ?= $(shell if [ -f "$(IDLE_SHUTDOWN_EXPORTER)" ]; then sha256sum "$(IDLE_SHUTDOWN_EXPORTER)" | awk '{print $$1}'; else echo unknown; fi)
-STAMP_CLOUD_INIT_SHA256 ?= $(shell if [ -f "$(CLOUD_INIT_PATH)" ]; then sha256sum "$(CLOUD_INIT_PATH)" | awk '{print $$1}'; else echo missing; fi)
 
 .PHONY: help check idle-smoke \
 	deb-build deb-build-amd64 deb-build-arm64 \
@@ -35,7 +33,6 @@ help:
 	&& echo "  make tag-list          List release tags" \
 	&& echo "" \
 	&& echo "Variables:" \
-	&& echo "  CLOUD_INIT_PATH=$(CLOUD_INIT_PATH)" \
 	&& echo "  DEB_ARCH=$(DEB_ARCH)" \
 	&& echo "  DEB_PACKAGE_VERSION=$(if $(strip $(DEB_PACKAGE_VERSION)),<set>,<empty>)" \
 	&& echo "  RELEASE_DIR=$(RELEASE_DIR)" \
@@ -54,7 +51,6 @@ idle-smoke:
 deb-build:
 	@arch="$(strip $(DEB_ARCH))"; \
 	override_ver="$(strip $(DEB_PACKAGE_VERSION))"; \
-	cloud_init="$(strip $(CLOUD_INIT_PATH))"; \
 	native_arch="$$(dpkg --print-architecture 2>/dev/null || echo amd64)"; \
 	pkg_ver="$$(dpkg-parsechangelog -S Version 2>/dev/null || head -n 1 debian/changelog | cut -d'(' -f2 | cut -d')' -f1)"; \
 	changelog_ver="$$pkg_ver"; \
@@ -64,11 +60,6 @@ deb-build:
 	cp debian/changelog "$$changelog_backup"; \
 	trap 'if [ "$$restore_changelog" = "1" ]; then cp "$$changelog_backup" debian/changelog; fi; rm -f -- "$$changelog_backup"' EXIT INT TERM; \
 	case "$$arch" in amd64|arm64) : ;; *) echo "[ERROR] Unsupported DEB_ARCH=$$arch (expected: amd64|arm64)"; exit 2 ;; esac; \
-	if [ ! -f "$$cloud_init" ]; then \
-		echo "[ERROR] Missing CLOUD_INIT_PATH: $$cloud_init"; \
-		echo "[HINT] Override with: make CLOUD_INIT_PATH=/path/to/cloud-init.yaml deb-build"; \
-		exit 2; \
-	fi; \
 	if [ -z "$$pkg_ver" ]; then echo "[ERROR] Could not resolve package version from debian/changelog"; exit 2; fi; \
 	if [ -n "$$override_ver" ] && [ "$$override_ver" != "$$pkg_ver" ]; then \
 		source_pkg="$$(dpkg-parsechangelog -S Source 2>/dev/null || echo idle-shutdown)"; \
@@ -94,7 +85,7 @@ deb-build:
 		echo "[INFO] Cross-building $$arch on $$native_arch (using dpkg-buildpackage $$extra_flags)"; \
 	fi; \
 	echo "[INFO] Building Debian package: idle-shutdown ($$arch)"; \
-	CLOUD_INIT_PATH="$$cloud_init" dpkg-buildpackage -us -uc -b -a"$$arch" $$extra_flags; \
+	dpkg-buildpackage -us -uc -b -a"$$arch" $$extra_flags; \
 	mkdir -p "$(RELEASE_DIR)"; \
 	for ext in deb changes buildinfo; do \
 		src="../idle-shutdown_$${pkg_ver}_$${arch}.$$ext"; \
@@ -307,7 +298,6 @@ tag-build:
 			echo "Debian upstream version: $$tag_ver"; \
 			echo "idle-shutdown.sh sha256: $(STAMP_IDLE_SHUTDOWN_SHA256)"; \
 			echo "export-idle-shutdown-assets.py sha256: $(STAMP_EXPORTER_SHA256)"; \
-			echo "cloud-init.yaml sha256: $(STAMP_CLOUD_INIT_SHA256)"; \
 			echo "Created at (UTC): $(STAMP_CREATE_UTC)"; \
 			echo ""; \
 			echo "Key files identifier (sha256 of manifest): $$identifier"; \

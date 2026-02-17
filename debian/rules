@@ -10,9 +10,7 @@ override_dh_auto_test:
 	:
 
 override_dh_auto_install:
-	@cloud_init="$${CLOUD_INIT_PATH:-../gce-lubuntu-noble/cloud-init.yaml}"; \
 	python3 ./export-idle-shutdown-assets.py \
-		--cloud-init "$$cloud_init" \
 		--idle-script ./idle-shutdown.sh \
 		--out-dir ./debian/tmp \
 		--git-rev package

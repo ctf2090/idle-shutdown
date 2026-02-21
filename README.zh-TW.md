@@ -35,6 +35,7 @@
 - 腳本會透過 `PROVISIONING_DONE_BOOT_ID_PATH` 做啟用門檻。
 - 若 marker 檔不存在，腳本會直接結束，不執行關機判斷。
 - 目的是避免在第一次開機 provisioning 期間被誤觸發關機。
+- 對一般主機/手動安裝可在 `/etc/default/idle-shutdown` 設定 `PROVISIONING_DONE_BOOT_ID_PATH=/dev/null` 來略過此 gate。
 
 ## SSH/RDP 輸入 Hook
 
@@ -99,7 +100,7 @@ Marker 清理 hook：
 - `SSH_TTY_AUDIT_LOG_PASSWD`（預設 `0`）：除非明確需求，應維持 `0` 以避免記錄密碼字元。
 - `SSH_TTY_AUDIT_MIN_TOUCH_INTERVAL_SEC`（預設 `1`）：每個 `(uid, tty)` marker 更新去抖間隔。
 - `IDLE_SHUTDOWN_STATE_DIR`（腳本 fallback `/var/lib/idle-shutdown`）。
-- `PROVISIONING_DONE_BOOT_ID_PATH`（腳本 fallback `$IDLE_SHUTDOWN_STATE_DIR/provisioning_done_boot_id`）。
+- `PROVISIONING_DONE_BOOT_ID_PATH`（腳本 fallback `$IDLE_SHUTDOWN_STATE_DIR/provisioning_done_boot_id`；一般主機可設為 `/dev/null` 停用第二次開機 gate）。
 
 ## 本地開發
 
@@ -205,8 +206,14 @@ stat -c '%y %n' /run/user/$uid/idle-terminal-activity-ssh-* 2>/dev/null | tail -
 注意：
 - 在 shell prompt 的 canonical mode 下，只按鍵不按 Enter，可能不會立即出現同樣事件型態。建議用 `vim` 或 raw-input read 測試每鍵捕捉是否正常。
 
-非我們 GCE cloud-init 佈署流程的手動安裝注意：
-- 請確認 `PROVISIONING_DONE_BOOT_ID_PATH` 存在，且內容與目前 `/proc/sys/kernel/random/boot_id` 不同；否則腳本會依設計持續跳過判斷。
+一般主機/手動安裝注意：
+- 方案 A（一般主機建議）：在 `/etc/default/idle-shutdown` 設定 `PROVISIONING_DONE_BOOT_ID_PATH=/dev/null`。
+- 方案 B（保留第二次開機 gate）：建立 marker，且內容與目前 `/proc/sys/kernel/random/boot_id` 不同，例如：
+
+```bash
+sudo install -d -m 700 /var/lib/idle-shutdown
+echo "manual-install" | sudo tee /var/lib/idle-shutdown/provisioning_done_boot_id >/dev/null
+```
 
 ## CI/CD
 

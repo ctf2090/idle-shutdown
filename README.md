@@ -35,6 +35,7 @@ Second-boot gate:
 - Script execution is intentionally gated by `PROVISIONING_DONE_BOOT_ID_PATH`.
 - If that marker file is missing, the script exits without shutdown logic.
 - This prevents shutdown during first-boot provisioning flows.
+- For non-cloud/manual installs, set `PROVISIONING_DONE_BOOT_ID_PATH=/dev/null` in `/etc/default/idle-shutdown` to bypass this gate.
 
 ## SSH/RDP Input Hooks
 
@@ -99,7 +100,7 @@ Key variables:
 - `SSH_TTY_AUDIT_LOG_PASSWD` (default `0`): keep `0` unless password-character auditing is explicitly required.
 - `SSH_TTY_AUDIT_MIN_TOUCH_INTERVAL_SEC` (default `1`): debounce interval per `(uid, tty)` marker touches.
 - `IDLE_SHUTDOWN_STATE_DIR` (script fallback `/var/lib/idle-shutdown`).
-- `PROVISIONING_DONE_BOOT_ID_PATH` (script fallback `$IDLE_SHUTDOWN_STATE_DIR/provisioning_done_boot_id`).
+- `PROVISIONING_DONE_BOOT_ID_PATH` (script fallback `$IDLE_SHUTDOWN_STATE_DIR/provisioning_done_boot_id`; set to `/dev/null` to disable second-boot gate on generic hosts).
 
 ## Local Development
 
@@ -205,8 +206,14 @@ stat -c '%y %n' /run/user/$uid/idle-terminal-activity-ssh-* 2>/dev/null | tail -
 Note:
 - At a shell prompt in canonical mode, pressing keys without Enter may not immediately produce the same event pattern. Test with `vim` or a raw-input read to validate per-key capture.
 
-Note for manual installs outside our GCE cloud-init provisioning flow:
-- Ensure `PROVISIONING_DONE_BOOT_ID_PATH` exists with a value different from current `/proc/sys/kernel/random/boot_id`, or the script will keep skipping by design.
+Note for non-cloud/manual installs:
+- Option A (recommended for generic hosts): set `PROVISIONING_DONE_BOOT_ID_PATH=/dev/null` in `/etc/default/idle-shutdown`.
+- Option B (keep second-boot gate): create marker with a value different from current `/proc/sys/kernel/random/boot_id`, for example:
+
+```bash
+sudo install -d -m 700 /var/lib/idle-shutdown
+echo "manual-install" | sudo tee /var/lib/idle-shutdown/provisioning_done_boot_id >/dev/null
+```
 
 ## CI/CD
 

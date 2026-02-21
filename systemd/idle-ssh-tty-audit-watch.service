@@ -1,0 +1,18 @@
+[Unit]
+Description=Watch Linux audit TTY events and update SSH activity markers
+After=network-online.target auditd.service ssh.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+SyslogIdentifier=idle-ssh-tty-audit-watch
+StandardOutput=journal+console
+StandardError=journal+console
+EnvironmentFile=-/etc/default/idle-shutdown
+ExecStartPre=/usr/local/sbin/idle-ssh-tty-audit-enable.sh
+ExecStart=/usr/local/sbin/idle-ssh-tty-audit-watch.sh
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

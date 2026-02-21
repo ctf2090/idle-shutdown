@@ -48,6 +48,51 @@ normalize_tty() {
   esac
 }
 
+resolve_tty_from_pid() {
+  local pid="$1"
+  local raw=""
+  local tty=""
+
+  case "$pid" in
+    ''|*[!0-9]*) printf '%s\n' ""; return 0 ;;
+  esac
+
+  if [ -r "/proc/$pid/fd/0" ]; then
+    raw="$(readlink -f "/proc/$pid/fd/0" 2>/dev/null || true)"
+    tty="$(normalize_tty "$raw")"
+    if [ -n "$tty" ]; then
+      printf '%s\n' "$tty"
+      return 0
+    fi
+  fi
+
+  raw="$(ps -p "$pid" -o tty= 2>/dev/null | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' | head -n 1)"
+  tty="$(normalize_tty "$raw")"
+  printf '%s\n' "$tty"
+}
+
+tty_from_major_minor() {
+  local major="$1"
+  local minor="$2"
+  local idx=0
+
+  case "$major" in
+    ''|*[!0-9]*) printf '%s\n' ""; return 0 ;;
+  esac
+  case "$minor" in
+    ''|*[!0-9]*) printf '%s\n' ""; return 0 ;;
+  esac
+
+  # Unix98 PTYs are usually exposed as majors 136..143 (256 minors each).
+  if [ "$major" -ge 136 ] && [ "$major" -le 143 ]; then
+    idx=$(( (major - 136) * 256 + minor ))
+    printf 'pts/%s\n' "$idx"
+    return 0
+  fi
+
+  printf '%s\n' ""
+}
+
 resolve_uid() {
   local ses="$1"
   local tty="$2"
@@ -96,6 +141,9 @@ handle_line() {
   local line="$1"
   local tty_raw=""
   local tty=""
+  local pid=""
+  local major=""
+  local minor=""
   local ses=""
   local uid=""
   local now=0
@@ -108,10 +156,16 @@ handle_line() {
   esac
 
   tty_raw="$(printf '%s\n' "$line" | sed -nE 's/.*[[:space:]]tty=([^[:space:]]+).*/\1/p' | head -n 1)"
-  case "$tty_raw" in
-    ''|'?'|'(none)') return 0 ;;
-  esac
   tty="$(normalize_tty "$tty_raw")"
+  if [ -z "$tty" ]; then
+    pid="$(printf '%s\n' "$line" | sed -nE 's/.*[[:space:]]pid=([0-9]+).*/\1/p' | head -n 1)"
+    tty="$(resolve_tty_from_pid "$pid")"
+  fi
+  if [ -z "$tty" ]; then
+    major="$(printf '%s\n' "$line" | sed -nE 's/.*[[:space:]]major=([0-9]+).*/\1/p' | head -n 1)"
+    minor="$(printf '%s\n' "$line" | sed -nE 's/.*[[:space:]]minor=([0-9]+).*/\1/p' | head -n 1)"
+    tty="$(tty_from_major_minor "$major" "$minor")"
+  fi
   [ -n "$tty" ] || return 0
 
   ses="$(printf '%s\n' "$line" | sed -nE 's/.*[[:space:]]ses=([0-9]+).*/\1/p' | head -n 1)"

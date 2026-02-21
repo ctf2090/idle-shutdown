@@ -35,6 +35,16 @@ XRDP_SESMAN_LOG_PATH=/var/log/xrdp-sesman.log
 SSH_LOG_UNIT=ssh
 SSH_AUTH_LOG_PATH=/var/log/auth.log
 
+# SSH keystroke hook (raw key events, including full-screen TUI apps like vim):
+# - enable via PAM pam_tty_audit + auditd log watcher
+# - kept in addition to PROMPT_COMMAND marker updates
+SSH_TTY_AUDIT_ENABLED=1
+SSH_TTY_AUDIT_LOG_PATH=/var/log/audit/audit.log
+# Keep disabled by default; enabling this may record password characters.
+SSH_TTY_AUDIT_LOG_PASSWD=0
+# Marker touch debounce per (uid, tty) to reduce write amplification.
+SSH_TTY_AUDIT_MIN_TOUCH_INTERVAL_SEC=1
+
 # In IDLE_MODE=activity, when no established RDP TCP exists, idle-shutdown
 # removes RDP marker files. This grace is a fallback in case a stale marker
 # survives cleanup (for example, unexpected permission/runtime state).

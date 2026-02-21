@@ -179,6 +179,32 @@ systemctl status idle-ssh-tty-audit-watch.service
 journalctl -u idle-shutdown.service -n 100 --no-pager
 ```
 
+### auditd 除錯（TTY 解析 bug）
+
+- 症狀：`audit.log` 有 `type=TTY`，但 SSH activity marker 沒更新，idle timer 也沒有 reset。
+- 根因（已修復）：部分系統的 TTY 記錄格式是 `tty pid=... major=... minor=...`（沒有 `tty=/dev/pts/N`）。舊版 watcher 只解析 `tty=...`，因此會忽略這類事件。
+- 修正後行為：watcher 會依序用 `tty=...`、`pid`、`major/minor`（Unix98 PTY）回推 tty，marker 更新可持續運作。
+
+快速檢查：
+
+```bash
+systemctl is-active auditd
+systemctl is-active idle-ssh-tty-audit-watch.service
+grep -n 'pam_tty_audit' /etc/pam.d/sshd
+sudo ausearch -m TTY --start recent | tail -n 20
+sudo grep 'type=TTY' /var/log/audit/audit.log | tail -n 20
+```
+
+Marker 驗證：
+
+```bash
+uid="$(id -u)"
+stat -c '%y %n' /run/user/$uid/idle-terminal-activity-ssh-* 2>/dev/null | tail -n 5
+```
+
+注意：
+- 在 shell prompt 的 canonical mode 下，只按鍵不按 Enter，可能不會立即出現同樣事件型態。建議用 `vim` 或 raw-input read 測試每鍵捕捉是否正常。
+
 非我們 GCE cloud-init 佈署流程的手動安裝注意：
 - 請確認 `PROVISIONING_DONE_BOOT_ID_PATH` 存在，且內容與目前 `/proc/sys/kernel/random/boot_id` 不同；否則腳本會依設計持續跳過判斷。
 

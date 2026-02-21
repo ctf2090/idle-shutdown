@@ -179,6 +179,32 @@ systemctl status idle-ssh-tty-audit-watch.service
 journalctl -u idle-shutdown.service -n 100 --no-pager
 ```
 
+### auditd Troubleshooting (TTY Parsing Bug)
+
+- Symptom: `audit.log` contains `type=TTY`, but SSH activity markers are not updated and idle timer does not reset.
+- Root cause (fixed): some systems emit TTY records as `tty pid=... major=... minor=...` (no `tty=/dev/pts/N`). Older watcher logic only parsed `tty=...`, so those records were ignored.
+- Current behavior: watcher now resolves tty using `tty=...`, then `pid`, then `major/minor` fallback (for Unix98 PTYs), so marker touches continue to work.
+
+Quick checks:
+
+```bash
+systemctl is-active auditd
+systemctl is-active idle-ssh-tty-audit-watch.service
+grep -n 'pam_tty_audit' /etc/pam.d/sshd
+sudo ausearch -m TTY --start recent | tail -n 20
+sudo grep 'type=TTY' /var/log/audit/audit.log | tail -n 20
+```
+
+Marker verification:
+
+```bash
+uid="$(id -u)"
+stat -c '%y %n' /run/user/$uid/idle-terminal-activity-ssh-* 2>/dev/null | tail -n 5
+```
+
+Note:
+- At a shell prompt in canonical mode, pressing keys without Enter may not immediately produce the same event pattern. Test with `vim` or a raw-input read to validate per-key capture.
+
 Note for manual installs outside our GCE cloud-init provisioning flow:
 - Ensure `PROVISIONING_DONE_BOOT_ID_PATH` exists with a value different from current `/proc/sys/kernel/random/boot_id`, or the script will keep skipping by design.
 

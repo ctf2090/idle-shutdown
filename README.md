@@ -26,7 +26,9 @@ Main runtime components:
 - `idle-shutdown.service`: executes `/usr/local/sbin/idle-shutdown.sh`.
 - `idle-rdp-disconnect-watch.service`: clears stale RDP markers on disconnect.
 - `idle-ssh-disconnect-watch.service`: clears stale SSH markers on disconnect.
+- `idle-ssh-tty-audit-watch.service`: tails Linux audit TTY events and updates SSH markers.
 - `/etc/profile.d/idle-terminal-activity.sh`: updates SSH marker mtime from shell activity.
+- `/usr/local/sbin/idle-ssh-tty-audit-enable.sh`: keeps `/etc/pam.d/sshd` aligned with tty-audit config.
 - `/usr/local/sbin/idle-rdp-input-watch.sh`: updates RDP marker mtime from desktop input.
 
 Second-boot gate:
@@ -45,6 +47,12 @@ SSH keystroke hook:
 - Marker path:
   - preferred: `/run/user/<uid>/idle-terminal-activity-ssh-<tty_tag>`
   - fallback: `/tmp/idle-terminal-activity-<uid>-ssh-<tty_tag>`
+
+SSH raw key hook (default enabled):
+- Files: `/usr/local/sbin/idle-ssh-tty-audit-enable.sh` and `/usr/local/sbin/idle-ssh-tty-audit-watch.sh`
+- Trigger model: `pam_tty_audit` in `sshd` + watcher over `auditd` TTY records (`type=TTY`).
+- Behavior: touches the same SSH marker path on per-keystroke style events (including full-screen TUI apps such as `vim`).
+- Note: this is additive to `PROMPT_COMMAND`, not a replacement.
 
 RDP keyboard/mouse hook:
 - File: `/usr/local/sbin/idle-rdp-input-watch.sh` (started by desktop autostart file).
@@ -86,6 +94,10 @@ Key variables:
 - `RDP_TCP_PORT` (default `3389`): RDP port checked for established sessions.
 - `RDP_DISCONNECT_GRACE_SECONDS` (default `90`): stale RDP marker cleanup grace.
 - `XRDP_SESMAN_LOG_PATH`, `SSH_LOG_UNIT`, `SSH_AUTH_LOG_PATH`: watcher log sources.
+- `SSH_TTY_AUDIT_ENABLED` (default `1`): enables `pam_tty_audit` + tty-audit marker watcher.
+- `SSH_TTY_AUDIT_LOG_PATH` (default `/var/log/audit/audit.log`): audit log source for tty events.
+- `SSH_TTY_AUDIT_LOG_PASSWD` (default `0`): keep `0` unless password-character auditing is explicitly required.
+- `SSH_TTY_AUDIT_MIN_TOUCH_INTERVAL_SEC` (default `1`): debounce interval per `(uid, tty)` marker touches.
 - `IDLE_SHUTDOWN_STATE_DIR` (script fallback `/var/lib/idle-shutdown`).
 - `PROVISIONING_DONE_BOOT_ID_PATH` (script fallback `$IDLE_SHUTDOWN_STATE_DIR/provisioning_done_boot_id`).
 
@@ -155,6 +167,7 @@ Post-install scripts enable/start:
 - `idle-shutdown.timer`
 - `idle-rdp-disconnect-watch.service`
 - `idle-ssh-disconnect-watch.service`
+- `idle-ssh-tty-audit-watch.service`
 
 Verify:
 
@@ -162,6 +175,7 @@ Verify:
 systemctl status idle-shutdown.timer
 systemctl status idle-rdp-disconnect-watch.service
 systemctl status idle-ssh-disconnect-watch.service
+systemctl status idle-ssh-tty-audit-watch.service
 journalctl -u idle-shutdown.service -n 100 --no-pager
 ```
 

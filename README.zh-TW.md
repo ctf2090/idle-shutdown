@@ -26,7 +26,9 @@
 - `idle-shutdown.service`：執行 `/usr/local/sbin/idle-shutdown.sh`。
 - `idle-rdp-disconnect-watch.service`：RDP 中斷時清除過期 marker。
 - `idle-ssh-disconnect-watch.service`：SSH 中斷時清除過期 marker。
+- `idle-ssh-tty-audit-watch.service`：追蹤 Linux audit TTY 事件並更新 SSH marker。
 - `/etc/profile.d/idle-terminal-activity.sh`：由 shell 活動更新 SSH marker mtime。
+- `/usr/local/sbin/idle-ssh-tty-audit-enable.sh`：讓 `/etc/pam.d/sshd` 與 tty-audit 設定保持一致。
 - `/usr/local/sbin/idle-rdp-input-watch.sh`：由桌面輸入事件更新 RDP marker mtime。
 
 第二次開機 gate：
@@ -45,6 +47,12 @@ SSH 鍵盤活動 hook：
 - Marker 路徑：
   - 優先：`/run/user/<uid>/idle-terminal-activity-ssh-<tty_tag>`
   - 備援：`/tmp/idle-terminal-activity-<uid>-ssh-<tty_tag>`
+
+SSH raw key 活動 hook（預設啟用）：
+- 檔案：`/usr/local/sbin/idle-ssh-tty-audit-enable.sh`、`/usr/local/sbin/idle-ssh-tty-audit-watch.sh`
+- 觸發模型：`sshd` 的 `pam_tty_audit` + watcher 讀取 `auditd` TTY 記錄（`type=TTY`）。
+- 行為：在每次按鍵類事件更新同一組 SSH marker（包含 `vim` 這類全螢幕 TUI 程式）。
+- 注意：這是加強機制，會與既有 `PROMPT_COMMAND` 並行，不是取代。
 
 RDP 鍵盤/滑鼠活動 hook：
 - 檔案：`/usr/local/sbin/idle-rdp-input-watch.sh`（由桌面 autostart 啟動）。
@@ -86,6 +94,10 @@ Marker 清理 hook：
 - `RDP_TCP_PORT`（預設 `3389`）：檢查已建立 RDP 連線的 TCP port。
 - `RDP_DISCONNECT_GRACE_SECONDS`（預設 `90`）：清理過期 RDP marker 的寬限秒數。
 - `XRDP_SESMAN_LOG_PATH`、`SSH_LOG_UNIT`、`SSH_AUTH_LOG_PATH`：watcher 日誌來源。
+- `SSH_TTY_AUDIT_ENABLED`（預設 `1`）：啟用 `pam_tty_audit` 與 tty-audit marker watcher。
+- `SSH_TTY_AUDIT_LOG_PATH`（預設 `/var/log/audit/audit.log`）：tty 事件 audit log 來源。
+- `SSH_TTY_AUDIT_LOG_PASSWD`（預設 `0`）：除非明確需求，應維持 `0` 以避免記錄密碼字元。
+- `SSH_TTY_AUDIT_MIN_TOUCH_INTERVAL_SEC`（預設 `1`）：每個 `(uid, tty)` marker 更新去抖間隔。
 - `IDLE_SHUTDOWN_STATE_DIR`（腳本 fallback `/var/lib/idle-shutdown`）。
 - `PROVISIONING_DONE_BOOT_ID_PATH`（腳本 fallback `$IDLE_SHUTDOWN_STATE_DIR/provisioning_done_boot_id`）。
 
@@ -155,6 +167,7 @@ sudo apt-get install -y ./idle-shutdown_<version>_all.deb
 - `idle-shutdown.timer`
 - `idle-rdp-disconnect-watch.service`
 - `idle-ssh-disconnect-watch.service`
+- `idle-ssh-tty-audit-watch.service`
 
 驗證：
 
@@ -162,6 +175,7 @@ sudo apt-get install -y ./idle-shutdown_<version>_all.deb
 systemctl status idle-shutdown.timer
 systemctl status idle-rdp-disconnect-watch.service
 systemctl status idle-ssh-disconnect-watch.service
+systemctl status idle-ssh-tty-audit-watch.service
 journalctl -u idle-shutdown.service -n 100 --no-pager
 ```
 

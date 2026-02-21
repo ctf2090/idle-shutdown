@@ -6,6 +6,7 @@ case "$1" in
     systemctl disable --now idle-shutdown.timer >/dev/null 2>&1 || true
     systemctl disable --now idle-rdp-disconnect-watch.service >/dev/null 2>&1 || true
     systemctl disable --now idle-ssh-disconnect-watch.service >/dev/null 2>&1 || true
+    systemctl disable --now idle-ssh-tty-audit-watch.service >/dev/null 2>&1 || true
     ;;
 esac
 

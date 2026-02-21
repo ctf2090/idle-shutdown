@@ -123,20 +123,23 @@ deb-smoke:
 	trap 'rm -rf -- "$$tmp_dir"' EXIT INT TERM; \
 	dpkg-deb -x "$$pkg" "$$tmp_dir/rootfs"; \
 	dpkg-deb -e "$$pkg" "$$tmp_dir/control"; \
-	for rel in \
-		etc/default/idle-shutdown \
-		etc/profile.d/idle-terminal-activity.sh \
-		etc/systemd/system/idle-shutdown.service \
-		etc/systemd/system/idle-shutdown.timer \
-		etc/systemd/system/idle-rdp-disconnect-watch.service \
-		etc/systemd/system/idle-ssh-disconnect-watch.service \
-		etc/idle-shutdown-git-rev \
-		etc/xdg/autostart/idle-rdp-input-watch.desktop \
-		usr/local/sbin/idle-shutdown.sh \
-		usr/local/sbin/idle-rdp-input-watch.sh \
-		usr/local/sbin/idle-rdp-disconnect-watch.sh \
-		usr/local/sbin/idle-ssh-disconnect-watch.sh \
-	; do \
+		for rel in \
+			etc/default/idle-shutdown \
+			etc/profile.d/idle-terminal-activity.sh \
+			etc/systemd/system/idle-shutdown.service \
+			etc/systemd/system/idle-shutdown.timer \
+			etc/systemd/system/idle-rdp-disconnect-watch.service \
+			etc/systemd/system/idle-ssh-disconnect-watch.service \
+			etc/systemd/system/idle-ssh-tty-audit-watch.service \
+			etc/idle-shutdown-git-rev \
+			etc/xdg/autostart/idle-rdp-input-watch.desktop \
+			usr/local/sbin/idle-shutdown.sh \
+			usr/local/sbin/idle-rdp-input-watch.sh \
+			usr/local/sbin/idle-rdp-disconnect-watch.sh \
+			usr/local/sbin/idle-ssh-disconnect-watch.sh \
+			usr/local/sbin/idle-ssh-tty-audit-watch.sh \
+			usr/local/sbin/idle-ssh-tty-audit-enable.sh \
+		; do \
 		if [ ! -e "$$tmp_dir/rootfs/$$rel" ]; then \
 			echo "[ERROR] Missing payload file: $$rel"; \
 			exit 2; \

@@ -5,8 +5,11 @@ etc/systemd/system/idle-shutdown.service etc/systemd/system/
 etc/systemd/system/idle-shutdown.timer etc/systemd/system/
 etc/systemd/system/idle-rdp-disconnect-watch.service etc/systemd/system/
 etc/systemd/system/idle-ssh-disconnect-watch.service etc/systemd/system/
+etc/systemd/system/idle-ssh-tty-audit-watch.service etc/systemd/system/
 etc/idle-shutdown-git-rev etc/
 usr/local/sbin/idle-shutdown.sh usr/local/sbin/
 usr/local/sbin/idle-rdp-input-watch.sh usr/local/sbin/
 usr/local/sbin/idle-rdp-disconnect-watch.sh usr/local/sbin/
 usr/local/sbin/idle-ssh-disconnect-watch.sh usr/local/sbin/
+usr/local/sbin/idle-ssh-tty-audit-watch.sh usr/local/sbin/
+usr/local/sbin/idle-ssh-tty-audit-enable.sh usr/local/sbin/

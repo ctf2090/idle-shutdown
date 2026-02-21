@@ -41,6 +41,11 @@ LOCAL_FILE_TARGETS = {
         0o644,
         "systemd/idle-ssh-disconnect-watch.service",
     ),
+    "/etc/systemd/system/idle-ssh-tty-audit-watch.service": (
+        "etc/systemd/system/idle-ssh-tty-audit-watch.service",
+        0o644,
+        "systemd/idle-ssh-tty-audit-watch.service",
+    ),
     "/usr/local/sbin/idle-rdp-input-watch.sh": (
         "usr/local/sbin/idle-rdp-input-watch.sh",
         0o755,
@@ -55,6 +60,16 @@ LOCAL_FILE_TARGETS = {
         "usr/local/sbin/idle-ssh-disconnect-watch.sh",
         0o755,
         "assets/usr/local/sbin/idle-ssh-disconnect-watch.sh",
+    ),
+    "/usr/local/sbin/idle-ssh-tty-audit-watch.sh": (
+        "usr/local/sbin/idle-ssh-tty-audit-watch.sh",
+        0o755,
+        "assets/usr/local/sbin/idle-ssh-tty-audit-watch.sh",
+    ),
+    "/usr/local/sbin/idle-ssh-tty-audit-enable.sh": (
+        "usr/local/sbin/idle-ssh-tty-audit-enable.sh",
+        0o755,
+        "assets/usr/local/sbin/idle-ssh-tty-audit-enable.sh",
     ),
 }
 
